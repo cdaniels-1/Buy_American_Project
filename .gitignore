@@ -3,7 +3,7 @@
 *.csv
 *.db
 *.sqlite
-*.env
+*.docx
 .env
 __pycache__/
 node_modules/
