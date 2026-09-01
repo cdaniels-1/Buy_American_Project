@@ -7,7 +7,7 @@ from datetime import datetime, UTC
 
 # connect to the database
 def get_db_connection():
-    return sqlite3.connect("products.db")
+    return sqlite3.connect(r"C:\Users\njdan\OneDrive\Buy_American_Project\Backend\Database\products.db")
 
 # normalize report columns
 def normalize(col):
@@ -146,7 +146,6 @@ def process_excel(df):
 
 def determine_country(country_of_origin):
 
-
     if pd.isna(country_of_origin):
         return "Unknown", 0
 
@@ -172,7 +171,7 @@ router = APIRouter()
 
 @router.post("/upload")
 
-# wait for file upload and process the excel file
+# wait for file upload and process the Excel file
 async def upload(file: UploadFile = File(...)):
     raw_bytes = await file.read()
     buffer = BytesIO(raw_bytes)

@@ -7,7 +7,7 @@ def delete_db(file_path):
 
 # recreate the tables
 def init_db():
-    conn = sqlite3.connect("products.db")
+    conn = sqlite3.connect(r"C:\Users\njdan\OneDrive\Buy_American_Project\Backend\Database\products.db")
     cursor = conn.cursor()
 
     with open("schema.sql", "r") as f:
@@ -17,7 +17,7 @@ def init_db():
     conn.close()
 
 if __name__ == "__main__":
-    delete_db("products.db")
+    delete_db(r"C:\Users\njdan\OneDrive\Buy_American_Project\Backend\Database\products.db")
     init_db()
 
 
