@@ -55,20 +55,27 @@ def process_excel(df):
         # derived fields
         domestic_status, has_multiple_countries = determine_country(country_of_origin)
 
-        # preserve a_la_carte and manual override selections if they exist
-        cursor.execute("SELECT is_a_la_carte, manual_override_status FROM products WHERE product_id = ?", (product_id,))
+        # preserve a_la_carte and exceptions if they exist
+        cursor.execute("""
+                       SELECT is_a_la_carte,
+                              manual_override_status,
+                              exception_cheaper,
+                              exception_non_domestic
+                       FROM products
+                       WHERE product_id = ?
+                       """, (product_id,))
         existing = cursor.fetchone()
 
-        if existing and existing[1] != "":
-            is_a_la_carte = existing[0]
-            manual_override_status = existing[1]
+        if existing:
+            is_a_la_carte = existing[0] if existing[0] is not None else 0
+            manual_override_status = existing[1] if existing[1] else ""
+            exception_cheaper = existing[2] if existing[2] is not None else 0
+            exception_non_domestic = existing[3] if existing[3] is not None else 0
         else:
             is_a_la_carte = 0
             manual_override_status = ""
-
-        # default exception flags
-        exception_cheaper = 0
-        exception_non_domestic = 0
+            exception_cheaper = 0
+            exception_non_domestic = 0
 
         # notes start empty
         notes = ""
@@ -113,11 +120,11 @@ def process_excel(df):
         obligation_number = row["obligationnumber"]
         obligation_date = str(row["obligationdate"])
         quantity = row["pieces"]
-        net_sales_ext = row["netsalesext$"]
+        net_sales_ext = round(row["netsalesext$"] * quantity, 4)
         notes_2 = ""
 
-        # insert or replace data for spending rows table
-        cursor.execute("""INSERT or REPLACE INTO spending_rows (
+        # insert data for spending rows table
+        cursor.execute("""INSERT INTO spending_rows (
                                product_id,
                                customer_name,
                                customer_id,
