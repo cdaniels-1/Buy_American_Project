@@ -1,6 +1,7 @@
 from fastapi.routing import APIRouter
 from Routers.upload import get_db_path
 import sqlite3
+from Routers.products import determine_country  # import your merge logic
 
 router = APIRouter()
 
@@ -9,37 +10,72 @@ def summary():
     conn = sqlite3.connect(get_db_path())
     cursor = conn.cursor()
 
-    cursor.execute("SELECT COUNT(*) FROM products WHERE is_a_la_carte = 0")
-    product_count = cursor.fetchone()[0]
+    cursor.execute("SELECT * FROM products")
+    products = cursor.fetchall()
 
-    cursor.execute("SELECT COUNT(*) FROM products WHERE domestic_status = 'Domestic' AND is_a_la_carte = 0")
-    domestic_count = cursor.fetchone()[0]
+    # Counters
+    total_products = 0
+    domestic_count = 0
+    foreign_count = 0
+    unknown_count = 0
 
-    cursor.execute("SELECT COUNT(*) FROM products WHERE domestic_status = 'Foreign' AND is_a_la_carte = 0")
-    foreign_count = cursor.fetchone()[0]
+    total_spending = 0
+    total_domestic = 0
+    total_foreign = 0
 
-    cursor.execute("SELECT COUNT(*) FROM products WHERE domestic_status = 'Unknown' AND is_a_la_carte = 0")
-    unknown_count = cursor.fetchone()[0]
+    # Loop through products and recalc final domestic status
+    for row in products:
+        (
+            product_id,
+            brand,
+            item_description,
+            country_of_origin,
+            domestic_status,          # Sysco
+            has_multiple_countries,
+            last_updated,
+            director_country,         # Director override
+            is_a_la_carte,
+            exception_cheaper,
+            exception_non_domestic,
+            manual_override_status,
+            notes
+        ) = row
 
-    cursor.execute("""SELECT SUM(net_sales_ext) FROM spending_rows s JOIN products p ON s.product_id = p.product_id
-                      WHERE is_a_la_carte = 0""")
-    total_spending = cursor.fetchone()[0]
-    if total_spending is None:
-        total_spending = 0
+        # Skip a la carte entirely
+        if is_a_la_carte == 1:
+            continue
 
-    cursor.execute("""SELECT SUM(net_sales_ext) FROM spending_rows s JOIN products p ON s.product_id = p.product_id 
-                      WHERE (p.domestic_status = 'Foreign' OR p.domestic_status = 'Unknown') AND p.is_a_la_carte = 0""")
-    total_foreign = cursor.fetchone()[0]
-    if total_foreign is None:
-        total_foreign = 0
+        # Recalculate final country using your override logic
+        final_country = director_country if director_country else country_of_origin
+        final_domestic_status, _ = determine_country(final_country)
 
-    cursor.execute("""SELECT SUM(net_sales_ext) FROM spending_rows s JOIN products p ON s.product_id = p.product_id
-                      WHERE p.domestic_status = 'Domestic' AND p.is_a_la_carte = 0""")
-    total_domestic = cursor.fetchone()[0]
-    if total_domestic is None:
-        total_domestic = 0
+        # Count products
+        total_products += 1
 
-    if total_spending != 0:
+        if final_domestic_status == "Domestic":
+            domestic_count += 1
+        elif final_domestic_status == "Foreign":
+            foreign_count += 1
+        else:
+            unknown_count += 1
+
+        # Spending rows for this product
+        cursor.execute("""
+            SELECT SUM(net_sales_ext)
+            FROM spending_rows
+            WHERE product_id = ?
+        """, (product_id,))
+        spending = cursor.fetchone()[0] or 0
+
+        total_spending += spending
+
+        if final_domestic_status == "Domestic":
+            total_domestic += spending
+        else:
+            total_foreign += spending
+
+    # Percentages
+    if total_spending > 0:
         foreign_percentage = round((total_foreign / total_spending) * 100, 2)
         domestic_percentage = round((total_domestic / total_spending) * 100, 2)
     else:
@@ -50,7 +86,7 @@ def summary():
 
     return {
         "Products": {
-            "Total": product_count,
+            "Total": total_products,
             "Domestic": domestic_count,
             "Foreign": foreign_count,
             "Unknown": unknown_count,
@@ -63,8 +99,3 @@ def summary():
             "Domestic percentage": domestic_percentage,
         }
     }
-
-
-
-
-
