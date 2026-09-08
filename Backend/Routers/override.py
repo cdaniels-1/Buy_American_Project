@@ -1,14 +1,24 @@
 from fastapi.routing import APIRouter
+from Routers.upload import get_db_path
 import sqlite3
-
 router = APIRouter()
+@router.put("/products/{product_id}/director-country")
+def set_director_country(product_id: int, director_country: str):
+    conn = sqlite3.connect(get_db_path())
+    cursor = conn.cursor()
 
-def get_db_connection():
-    return sqlite3.connect(r"C:\Users\njdan\OneDrive\Buy_American_Project\Backend\Database\products.db")
+    cursor.execute("""UPDATE products
+                      SET director_country = ?,
+                          country_of_origin = ?
+                      WHERE product_id = ?""", (director_country, director_country, product_id))
+
+    conn.commit()
+    conn.close()
+    return {"status": "Success", "product_id": product_id, "director_country": director_country, "country_of_origin": director_country}
 
 @router.put("/products/{product_id}/a-la-carte")
 def set_a_la_carte(product_id: int, is_a_la_carte: int ):
-    conn = get_db_connection()
+    conn = sqlite3.connect(get_db_path())
     cursor = conn.cursor()
 
     cursor.execute("""UPDATE products 
@@ -21,7 +31,7 @@ def set_a_la_carte(product_id: int, is_a_la_carte: int ):
 
 @router.put("/products/{product_id}/exception-cheaper")
 def set_exception_cheaper(product_id: int, exception_cheaper: int):
-    conn = get_db_connection()
+    conn = sqlite3.connect(get_db_path())
     cursor = conn.cursor()
 
     cursor.execute("""UPDATE products
@@ -33,7 +43,7 @@ def set_exception_cheaper(product_id: int, exception_cheaper: int):
 
 @router.put("/products/{product_id}/exception-non-domestic")
 def set_exception_non_domestic(product_id: int, exception_non_domestic: int):
-    conn = get_db_connection()
+    conn = sqlite3.connect(get_db_path())
     cursor = conn.cursor()
 
     cursor.execute("""UPDATE products

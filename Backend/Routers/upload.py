@@ -4,10 +4,14 @@ import pandas as pd
 from io import BytesIO
 import sqlite3
 from datetime import datetime, UTC
+import os
 
 # connect to the database
-def get_db_connection():
-    return sqlite3.connect(r"C:\Users\njdan\OneDrive\Buy_American_Project\Backend\Database\products.db")
+def get_db_path():
+    current_dir = os.path.dirname(os.path.abspath(__file__))
+    backend_dir = str(os.path.dirname(current_dir))
+    db_path = os.path.join(backend_dir, "Database", "products.db")
+    return db_path
 
 # normalize report columns
 def normalize(col):
@@ -22,7 +26,7 @@ def normalize(col):
 
 # function for processing excel report
 def process_excel(df):
-    conn = get_db_connection()
+    conn = sqlite3.connect(get_db_path())
     cursor = conn.cursor()
 
     # required columns
@@ -50,17 +54,27 @@ def process_excel(df):
         product_id = row["itemnumber"]
         brand = row["brandid"]
         item_description = row["itemdescription"]
-        country_of_origin = row["countryoforigin"]
+
+        cursor.execute("SELECT director_country FROM products WHERE product_id = ?", (product_id,))
+        result = cursor.fetchone()
+        director_country = result[0] if result else None
+
+        if director_country:
+            country_of_origin = director_country[0]
+        else:
+            country_of_origin = row["countryoforigin"]
 
         # derived fields
         domestic_status, has_multiple_countries = determine_country(country_of_origin)
 
         # preserve a_la_carte and exceptions if they exist
         cursor.execute("""
-                       SELECT is_a_la_carte,
+                       SELECT 
+                              is_a_la_carte,
                               manual_override_status,
                               exception_cheaper,
-                              exception_non_domestic
+                              exception_non_domestic,
+                              notes
                        FROM products
                        WHERE product_id = ?
                        """, (product_id,))
@@ -71,14 +85,13 @@ def process_excel(df):
             manual_override_status = existing[1] if existing[1] else ""
             exception_cheaper = existing[2] if existing[2] is not None else 0
             exception_non_domestic = existing[3] if existing[3] is not None else 0
+            notes = existing[4] if existing[4] else ""
         else:
             is_a_la_carte = 0
             manual_override_status = ""
             exception_cheaper = 0
             exception_non_domestic = 0
-
-        # notes start empty
-        notes = ""
+            notes = ""
 
         timestamp = datetime.now(UTC).isoformat()
 
@@ -90,6 +103,7 @@ def process_excel(df):
                        country_of_origin,
                        domestic_status,
                        has_multiple_countries,
+                       director_country,
                        is_a_la_carte,
                        exception_cheaper,
                        exception_non_domestic,
@@ -97,7 +111,7 @@ def process_excel(df):
                        last_updated,
                        notes
                        )
-                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?)""" ,
+                       VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)""" ,
                        (
                            product_id,
                            brand,
@@ -105,6 +119,7 @@ def process_excel(df):
                            country_of_origin,
                            domestic_status,
                            has_multiple_countries,
+                           director_country,
                            is_a_la_carte,
                            exception_cheaper,
                            exception_non_domestic,
@@ -120,7 +135,7 @@ def process_excel(df):
         obligation_number = row["obligationnumber"]
         obligation_date = str(row["obligationdate"])
         quantity = row["pieces"]
-        net_sales_ext = round(row["netsalesext$"] * quantity, 4)
+        net_sales_ext = row["netsalesext$"]
         notes_2 = ""
 
         # insert data for spending rows table
@@ -184,7 +199,12 @@ async def upload(file: UploadFile = File(...)):
     buffer = BytesIO(raw_bytes)
     df = pd.read_excel(buffer)
     df.columns = [normalize(col) for col in df.columns]
-    process_excel(df)
+    try:
+        process_excel(df)
+        return {"status": "success", "rows_processed": len(df)}
+
+    except Exception as e:
+        return {"error": str(e)}
 
 
 
