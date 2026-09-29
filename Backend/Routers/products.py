@@ -9,11 +9,11 @@ router = APIRouter()
 def product_list():
     conn = sqlite3.connect(get_db_path())
     cursor = conn.cursor()
-
     cursor.execute("SELECT * FROM products")
     rows = cursor.fetchall()
     conn.close()
     products = []
+
     for row in rows:
         (
             product_id,
