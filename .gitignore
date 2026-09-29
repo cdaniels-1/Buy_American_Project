@@ -3,11 +3,8 @@
 *.csv
 *.db
 *.sqlite
-<<<<<<< HEAD
 *.docx
-=======
->>>>>>> 1c49eea (Working Excel ingestion pipeline and DB initialization)
 .env
 __pycache__/
 node_modules/
-*.docx
+
