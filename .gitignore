@@ -4,7 +4,8 @@
 *.db
 *.sqlite
 *.docx
-.env
+*.env
+*.idea
 __pycache__/
 node_modules/
 
