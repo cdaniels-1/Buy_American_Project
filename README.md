@@ -53,7 +53,7 @@ Includes:
 - Finishing page and search function for grouping expense rows by product.
 - Optimizing visualization of product and expense metadata for efficient search and display.
 
-## Upcoming Features
+### Upcoming Features
 - Allow toggles to categorize products as a la carte, exception 1, and exception 2.
 - Sort and display summary data by date.
 
