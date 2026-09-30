@@ -45,7 +45,17 @@ Searchable list of all products with key attributes.
 Includes:
 - Full metadata for a selected product  
 - All associated spending-row records  
-- Virtualized table for efficient rendering  
+- Virtualized table for efficient rendering
+
+## Work in Progress
+
+### Current Tasks
+- Finishing page and search function for grouping expense rows by product.
+- Optimizing visualization of product and expense metadata for efficient search and display.
+
+## Upcoming Features
+- Allow toggles to categorize products as a la carte, exception 1, and exception 2.
+- Sort and display summary data by date.
 
 ## Running the Application
 
